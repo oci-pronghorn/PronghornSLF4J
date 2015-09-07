@@ -6,14 +6,14 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.ociweb.pronghorn.ring.FieldReferenceOffsetManager;
-import com.ociweb.pronghorn.ring.RingBuffer;
-import com.ociweb.pronghorn.ring.RingBufferConfig;
-import com.ociweb.pronghorn.ring.RingReader;
-import com.ociweb.pronghorn.ring.RingWriter;
-import com.ociweb.pronghorn.ring.token.OperatorMask;
-import com.ociweb.pronghorn.ring.token.TokenBuilder;
-import com.ociweb.pronghorn.ring.token.TypeMask;
+import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
+import com.ociweb.pronghorn.pipe.Pipe;
+import com.ociweb.pronghorn.pipe.PipeConfig;
+import com.ociweb.pronghorn.pipe.PipeReader;
+import com.ociweb.pronghorn.pipe.PipeWriter;
+import com.ociweb.pronghorn.pipe.token.OperatorMask;
+import com.ociweb.pronghorn.pipe.token.TokenBuilder;
+import com.ociweb.pronghorn.pipe.token.TypeMask;
 
 public class RingBufferLoggerTest implements RingBufferLoggerMessageConsumer {
  	private static int[] SINGLE_MESSAGE_TOKENS = new int[]{TokenBuilder.buildToken(TypeMask.Decimal, OperatorMask.Field_None, 0),
@@ -28,7 +28,7 @@ public class RingBufferLoggerTest implements RingBufferLoggerMessageConsumer {
 	ZERO_PREMABLE, 
 	SINGLE_MESSAGE_NAMES, 
 	SINGLE_MESSAGE_IDS);
-	private final RingBufferConfig CONFIG = new RingBufferConfig(PRIMARY_RING_SIZE,BYTE_RING_SIZE,null,FROM);
+	private final PipeConfig CONFIG = new PipeConfig(PRIMARY_RING_SIZE,BYTE_RING_SIZE,null,FROM);
 	
 	private final int FRAG_LOC = 0;
 	private final int FRAG_FIELD_ASC = FieldReferenceOffsetManager.LOC_CHUNKED_STREAM_FIELD;
@@ -67,7 +67,7 @@ public class RingBufferLoggerTest implements RingBufferLoggerMessageConsumer {
     
     @Ignore //Need Roman to fix this up since migrating it in
     public void testLoggingToALocalRingAndReadingHere() {
-    	RingBuffer loggerRing = new RingBuffer(new RingBufferConfig((byte)7,BYTE_RING_SIZE,null,FieldReferenceOffsetManager.RAW_BYTES));
+    	Pipe loggerRing = new Pipe(new PipeConfig((byte)7,BYTE_RING_SIZE,null,FieldReferenceOffsetManager.RAW_BYTES));
     	loggerThread = createThreadToReadFromLoggerBuffer(loggerRing);
     	initiateLogger("Output to a local Ring and then Reading from it", 
     					"test4", 0, loggerRing, null);
@@ -77,17 +77,17 @@ public class RingBufferLoggerTest implements RingBufferLoggerMessageConsumer {
     		Thread.yield();
     	}
     }
-	private void readTestValue(RingBuffer ring, int varDataMax, int testSize,
+	private void readTestValue(Pipe ring, int varDataMax, int testSize,
 			int FIELD_LOC, int k) {		
 		
 		int expectedValue = ((varDataMax*(k))/testSize);		        	
 		
-		int exp = RingReader.readDecimalExponent(ring, FIELD_LOC);
-		long man = RingReader.readDecimalMantissa(ring, FIELD_LOC);
+		int exp = PipeReader.readDecimalExponent(ring, FIELD_LOC);
+		long man = PipeReader.readDecimalMantissa(ring, FIELD_LOC);
 		
 		//System.err.println("read "+exp+" and "+man);
 		
-		float floatValue = RingReader.readFloat(ring, FIELD_LOC);
+		float floatValue = PipeReader.readFloat(ring, FIELD_LOC);
 		assertEquals(floatValue+"",2, exp);
 		assertEquals(floatValue+"",expectedValue,man);
  		logger.info("                         #"+(testSize-k)+" <- "+floatValue);
@@ -111,27 +111,27 @@ public class RingBufferLoggerTest implements RingBufferLoggerMessageConsumer {
     	}
     }
     
-	private void writeTestValue(RingBuffer ring, int blockSize, int testSize) {
+	private void writeTestValue(Pipe ring, int blockSize, int testSize) {
 		int j = testSize;
 		
         while (true) {
         	
         	if (j == 0) {
        			logger.info("#"+(testSize+1)+" COMPLETED WRITING");
-				RingWriter.publishEOF(ring);
+				PipeWriter.publishEOF(ring);
         		return;//done
         	}
         
-        	if (RingWriter.tryWriteFragment(ring, FRAG_LOC)) { //returns true if there is room to write this fragment
+        	if (PipeWriter.tryWriteFragment(ring, FRAG_LOC)) { //returns true if there is room to write this fragment
      		
         		int value = (--j*blockSize)/testSize;
 
         		float floatEquivalent = (float)value / 100;
        			logger.info("#"+(testSize-j)+" -> "+floatEquivalent);
        		
-        		RingWriter.writeDecimal(ring, FRAG_FIELD, 2, (long) value );
+        		PipeWriter.writeDecimal(ring, FRAG_FIELD, 2, (long) value );
         	
-        		RingWriter.publishWrites(ring); //must always publish the writes if message or fragment
+        		PipeWriter.publishWrites(ring); //must always publish the writes if message or fragment
         		
         	} else {
         		//Unable to write because there is no room so do something else while we are waiting.
@@ -142,7 +142,7 @@ public class RingBufferLoggerTest implements RingBufferLoggerMessageConsumer {
 	}
 	   
    private void writeReadDecimalsThreaded() {
-	    final RingBuffer ring = new RingBuffer(CONFIG);
+	    final Pipe ring = new Pipe(CONFIG);
     	
         final int messageSize = FROM.fragDataSize[FRAG_LOC];
         final int varDataMax = (ring.byteMask/(ring.mask>>1))/messageSize;        
@@ -171,10 +171,10 @@ public class RingBufferLoggerTest implements RingBufferLoggerMessageConsumer {
         	//This is the example code that one would normally use.
         	
         	//System.err.println("content "+ring.contentRemaining(ring));
-	        if (RingReader.tryReadFragment(ring)) { //this method releases old messages as needed and moves pointer up to the next fragment
+	        if (PipeReader.tryReadFragment(ring)) { //this method releases old messages as needed and moves pointer up to the next fragment
 	        	k--;//count down all the expected messages so we stop this test at the right time
-	        	assertTrue(RingReader.isNewMessage(ring));
-				int messageIdx = RingReader.getMsgIdx(ring);
+	        	assertTrue(PipeReader.isNewMessage(ring));
+				int messageIdx = PipeReader.getMsgIdx(ring);
 				if (messageIdx<0) {
 					break;
 				}
@@ -208,7 +208,7 @@ public class RingBufferLoggerTest implements RingBufferLoggerMessageConsumer {
 		int l = (int)(k / m);
 		logger.info("Finished method2() l="+l);
 	}
-    private Thread createThreadToReadFromLoggerBuffer(final RingBuffer ring) {
+    private Thread createThreadToReadFromLoggerBuffer(final Pipe ring) {
 	   stopWriting = false;
 	   Thread t = new Thread(new Runnable(){
 
@@ -216,8 +216,8 @@ public class RingBufferLoggerTest implements RingBufferLoggerMessageConsumer {
 			public void run() {
 		        while (true) {
 		        	StringBuffer target = new StringBuffer();
-		        	if(RingReader.tryReadFragment(ring)) {
-			        	RingReader.readASCII(ring, FRAG_FIELD_ASC, target);
+		        	if(PipeReader.tryReadFragment(ring)) {
+			        	PipeReader.readASCII(ring, FRAG_FIELD_ASC, target);
 		        		consumeMessage(target);
 			        }
 			        else if(stopWriting) {
@@ -248,7 +248,7 @@ public class RingBufferLoggerTest implements RingBufferLoggerMessageConsumer {
     * @param consumer consumer of the log messages
     */
    private void initiateLogger(String title, String name, 
-		   int byteRingSizeInBits, RingBuffer ring,
+		   int byteRingSizeInBits, Pipe ring,
 		   RingBufferLoggerMessageConsumer consumer) {
    	System.setProperty(RingBufferLogger.BYTE_RING_SIZE,""+byteRingSizeInBits);
    	logger = (RingBufferLogger)StaticLoggerBinder.getSingleton()

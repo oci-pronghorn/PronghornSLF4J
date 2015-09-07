@@ -2,11 +2,11 @@ package org.slf4j.impl;
 
 import org.slf4j.Logger;
 
-import com.ociweb.pronghorn.ring.FieldReferenceOffsetManager;
-import com.ociweb.pronghorn.ring.RingBuffer;
-import com.ociweb.pronghorn.ring.RingBufferConfig;
-import com.ociweb.pronghorn.ring.RingReader;
-import com.ociweb.pronghorn.ring.RingWriter;
+import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
+import com.ociweb.pronghorn.pipe.Pipe;
+import com.ociweb.pronghorn.pipe.PipeConfig;
+import com.ociweb.pronghorn.pipe.PipeReader;
+import com.ociweb.pronghorn.pipe.PipeWriter;
 
 
 public class RingBufferLogger extends SimpleLogger implements Logger, RingBufferLoggerMessageConsumer {
@@ -15,7 +15,7 @@ public class RingBufferLogger extends SimpleLogger implements Logger, RingBuffer
 	
 	private static final long serialVersionUID = 1816082662721088255L;
 	
-	private RingBuffer ring = null;
+	private Pipe ring = null;
 	private byte primaryRingSizeInBits = 7; //this ring is 2^7 eg 128
 	private byte byteRingSizeInBits = 16;
 	private Thread writeToFileThread = null;
@@ -28,8 +28,8 @@ public class RingBufferLogger extends SimpleLogger implements Logger, RingBuffer
 		super(name);
 		loadConfiguration();
 		if(primaryRingSizeInBits!=0 && byteRingSizeInBits!=0) {
-			RingBufferConfig config = new RingBufferConfig(primaryRingSizeInBits,byteRingSizeInBits,null,FieldReferenceOffsetManager.RAW_BYTES);
-			ring = new RingBuffer(config);
+			PipeConfig config = new PipeConfig(primaryRingSizeInBits,byteRingSizeInBits,null,FieldReferenceOffsetManager.RAW_BYTES);
+			ring = new Pipe(config);
 			consumer = this;
 		}
 	}
@@ -89,9 +89,9 @@ public class RingBufferLogger extends SimpleLogger implements Logger, RingBuffer
 	private void writeToRing(StringBuilder buf) {
 		synchronized(ring) {
 	    while (true) {
-        	if (RingWriter.tryWriteFragment(ring,FRAG_LOC)) {
-         		RingWriter.writeASCII(ring, FRAG_FIELD, buf);
-        		RingBuffer.publishWrites(ring);
+        	if (PipeWriter.tryWriteFragment(ring,FRAG_LOC)) {
+         		PipeWriter.writeASCII(ring, FRAG_FIELD, buf);
+        		Pipe.publishWrites(ring);
 	        	if(consumer!=null && writeToFileThread==null) {
 	        		writeToFileThread = new Thread(new Runnable(){
 
@@ -99,8 +99,8 @@ public class RingBufferLogger extends SimpleLogger implements Logger, RingBuffer
 	        			public void run() {
 	        		        while (true) {
 	        		        	StringBuffer target = new StringBuffer();
-	        			        if (RingReader.tryReadFragment(ring)) {
-	        			        	RingReader.readASCII(ring, FRAG_FIELD, target);
+	        			        if (PipeReader.tryReadFragment(ring)) {
+	        			        	PipeReader.readASCII(ring, FRAG_FIELD, target);
         			        		consumer.consumeMessage(target);
 	        			        }
 	        			        else if(stopWriting) {
@@ -136,11 +136,11 @@ public class RingBufferLogger extends SimpleLogger implements Logger, RingBuffer
 		}
 		return buff;
 	}
-	public RingBuffer getRingBuffer() {
+	public Pipe getRingBuffer() {
 		return ring;
 	}
 
-	public void setRingBuffer(RingBuffer ring) {
+	public void setRingBuffer(Pipe ring) {
 		this.ring = ring;
 	}
 	

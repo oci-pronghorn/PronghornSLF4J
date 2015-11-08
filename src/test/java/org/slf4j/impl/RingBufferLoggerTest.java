@@ -7,10 +7,12 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
+import com.ociweb.pronghorn.pipe.MessageSchemaDynamic;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.PipeReader;
 import com.ociweb.pronghorn.pipe.PipeWriter;
+import com.ociweb.pronghorn.pipe.RawDataSchema;
 import com.ociweb.pronghorn.pipe.token.OperatorMask;
 import com.ociweb.pronghorn.pipe.token.TokenBuilder;
 import com.ociweb.pronghorn.pipe.token.TypeMask;
@@ -28,7 +30,7 @@ public class RingBufferLoggerTest implements RingBufferLoggerMessageConsumer {
 	ZERO_PREMABLE, 
 	SINGLE_MESSAGE_NAMES, 
 	SINGLE_MESSAGE_IDS);
-	private final PipeConfig CONFIG = new PipeConfig(PRIMARY_RING_SIZE,BYTE_RING_SIZE,null,FROM);
+	private final PipeConfig CONFIG = new PipeConfig(PRIMARY_RING_SIZE,BYTE_RING_SIZE,null, new MessageSchemaDynamic(FROM));
 	
 	private final int FRAG_LOC = 0;
 	private final int FRAG_FIELD_ASC = FieldReferenceOffsetManager.LOC_CHUNKED_STREAM_FIELD;
@@ -67,7 +69,7 @@ public class RingBufferLoggerTest implements RingBufferLoggerMessageConsumer {
     
     @Ignore //Need Roman to fix this up since migrating it in
     public void testLoggingToALocalRingAndReadingHere() {
-    	Pipe loggerRing = new Pipe(new PipeConfig((byte)7,BYTE_RING_SIZE,null,FieldReferenceOffsetManager.RAW_BYTES));
+    	Pipe loggerRing = new Pipe(new PipeConfig((byte)7,BYTE_RING_SIZE,null,  RawDataSchema.instance));
     	loggerThread = createThreadToReadFromLoggerBuffer(loggerRing);
     	initiateLogger("Output to a local Ring and then Reading from it", 
     					"test4", 0, loggerRing, null);

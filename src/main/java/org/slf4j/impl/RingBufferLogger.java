@@ -7,6 +7,7 @@ import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.PipeReader;
 import com.ociweb.pronghorn.pipe.PipeWriter;
+import com.ociweb.pronghorn.pipe.RawDataSchema;
 
 
 public class RingBufferLogger extends SimpleLogger implements Logger, RingBufferLoggerMessageConsumer {
@@ -28,7 +29,7 @@ public class RingBufferLogger extends SimpleLogger implements Logger, RingBuffer
 		super(name);
 		loadConfiguration();
 		if(primaryRingSizeInBits!=0 && byteRingSizeInBits!=0) {
-			PipeConfig config = new PipeConfig(primaryRingSizeInBits,byteRingSizeInBits,null,FieldReferenceOffsetManager.RAW_BYTES);
+			PipeConfig config = new PipeConfig(primaryRingSizeInBits,byteRingSizeInBits,null, RawDataSchema.instance);
 			ring = new Pipe(config);
 			consumer = this;
 		}

@@ -22,8 +22,8 @@ public class RingBufferLogger extends SimpleLogger implements Logger, RingBuffer
 	private Thread writeToFileThread = null;
 	private boolean stopWriting = false;
 	private RingBufferLoggerMessageConsumer consumer;
-	private final int FRAG_LOC = FieldReferenceOffsetManager.LOC_CHUNKED_STREAM;
-	private final int FRAG_FIELD = FieldReferenceOffsetManager.LOC_CHUNKED_STREAM_FIELD;
+	private final int FRAG_LOC = RawDataSchema.MSG_CHUNKEDSTREAM_1;
+	private final int FRAG_FIELD = RawDataSchema.MSG_CHUNKEDSTREAM_1_FIELD_BYTEARRAY_2;
 
 	RingBufferLogger(String name) {
 		super(name);

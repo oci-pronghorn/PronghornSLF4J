@@ -33,7 +33,7 @@ public class RingBufferLoggerTest implements RingBufferLoggerMessageConsumer {
 	private final PipeConfig CONFIG = new PipeConfig(PRIMARY_RING_SIZE,BYTE_RING_SIZE,null, new MessageSchemaDynamic(FROM));
 	
 	private final int FRAG_LOC = 0;
-	private final int FRAG_FIELD_ASC = FieldReferenceOffsetManager.LOC_CHUNKED_STREAM_FIELD;
+	private final int FRAG_FIELD_ASC = RawDataSchema.MSG_CHUNKEDSTREAM_1_FIELD_BYTEARRAY_2;
 	private final int FRAG_FIELD = FieldReferenceOffsetManager.lookupFieldLocator(SINGLE_MESSAGE_NAMES[0], 0, FROM);
 	private RingBufferLogger logger;
 	private Thread loggerThread;
